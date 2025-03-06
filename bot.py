@@ -30,21 +30,26 @@ def get_youtube_audio_url(query):
 # Play 
 @bot.command()
 async def play(ctx, *, query):
-    vc = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+    """Join VC and play YouTube audio"""
+    vc = ctx.voice_client
 
     if not vc or not vc.is_connected():
-        vc = await join_voice(ctx)
-        if not vc:
-            return
+        vc = await ctx.author.voice.channel.connect()
 
     url = get_youtube_audio_url(query)
 
-    vc.stop()
-    ffmpeg_opts = {"options": "-vn"}
+    ffmpeg_opts = {
+        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+        'options': '-vn'
+    }
+
     vc.play(discord.FFmpegPCMAudio(url, **ffmpeg_opts))
 
-    await ctx.send(f"Here u go: **{query}**")
+    while vc.is_playing() or vc.is_paused():
+        await ctx.send(f"Here u go: **{query}**")
+        await asyncio.sleep(1)
 
+# Stop
 @bot.command()
 async def stop(ctx):
     vc = discord.utils.get(bot.voice_clients, guild=ctx.guild)
@@ -52,4 +57,5 @@ async def stop(ctx):
         await vc.disconnect()
         await ctx.send("Alr fuck u too.")
 
+# Run
 bot.run("")
